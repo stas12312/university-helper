@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     SQLALCHEMY_DATABASE_URI: Optional[str] = None
     SYNC_SQLALCHEMY_DATABASE_URI: Optional[str] = None
 
+    QIWI_PUBLIC_KEY: str
+    QIWI_PRIVATE_KEY: str
+
     @validator("SQLALCHEMY_DATABASE_URI", pre=True)
     def assemble_db_connection(cls, v: Optional[str], values: dict[str, Any]) -> Any:
         if isinstance(v, str):

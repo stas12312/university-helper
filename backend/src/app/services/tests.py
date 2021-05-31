@@ -174,25 +174,67 @@ class TestService:
     async def create(cls, db: AsyncSession, user: models.User, test_id: int) -> models.Test:
         """Создание нового теста"""
 
-        c_date = datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(minutes=10)
+        c_date = datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(minutes=30)
         # Проверка, что прошло 10 минут с последнего заказа
         if not user.is_superuser:
             result = await db.execute(
                 select(models.Test).where(models.Test.user_id == user.id, models.Test.created_at >= c_date)
             )
             if result.scalars().first():
-                raise HTTPException(status_code=400, detail='Делать заказ можно не чаще, чем раз в 10 минут')
+                raise HTTPException(status_code=400, detail='Делать заказ можно не чаще, чем раз в 30 минут')
 
+        b_date = datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=30)
         result = await db.execute(
-            insert(models.Test)
-                .values(user_id=user.id, external_id=test_id, created_at=datetime.datetime.now())
-                .returning(models.Test.uuid)
+            select(models.Test).where(models.Test.external_id == test_id, models.Test.created_at >= b_date)
+                .options(joinedload(models.Test.questions))
         )
+        exists_test = result.scalars().first()
+        if exists_test:
+            test = await cls.create_test_from_existing_test(db, user, exists_test)
+            return test
+        else:
+            result = await db.execute(
+                insert(models.Test)
+                    .values(user_id=user.id, external_id=test_id, created_at=datetime.datetime.now())
+                    .returning(models.Test.uuid)
+            )
         await db.commit()
         test_uuid: str = result.scalars().first()
 
         get_asnwers.delay(test_uuid)
 
+        result = await db.execute(select(models.Test).where(models.Test.uuid == test_uuid))
+
+        return result.scalar_one()
+
+    @classmethod
+    async def create_test_from_existing_test(cls, db: AsyncSession,
+                                             user: models.User, from_test: models.Test) -> models.Test:
+        """Создание теста из существующего"""
+
+        result = await db.execute(
+            insert(models.Test)
+                .values(user_id=user.id, external_id=from_test.external_id, created_at=datetime.datetime.now(),
+                        status=models.Test.SUCCESS, title=from_test.title, cost=from_test.cost)
+                .returning(models.Test.uuid)
+        )
+
+        test_uuid: str = result.scalars().first()
+
+        copy_questions = []
+        question: models.Question
+        for question in from_test.questions:
+            copy_questions.append({
+                'external_id': question.external_id,
+                'type': 0,
+                'test_id': test_uuid,
+                'rubric': question.rubric,
+                'body': question.body,
+                'answers': question.answers,
+            })
+
+        await db.execute(insert(models.Question).values(copy_questions))
+        await db.commit()
         result = await db.execute(select(models.Test).where(models.Test.uuid == test_uuid))
 
         return result.scalar_one()

@@ -1,15 +1,38 @@
 <template>
   <transition name="el-fade-in-linear">
-    <el-row class="block" v-show="show" style="margin-top: 10px">
+    <el-row class="block" v-show="show" style="margin-top: 10px" type="flex" justify="center">
       <el-col :span="24">
         <p><i class="el-icon-message"></i> Почта {{ user.email }}</p>
         <p><i class="el-icon-coin"></i> Ваш баланс: {{ user.balance }} </p>
-        <p><i class="el-icon-question"></i> Для пополнения баланса обратитесь в службу поддержки:
-        </p>
-        <el-link icon="el-icon-message" :underline="false" href="mailto:support@university-helper.ru" type="primary"
-                 style="font-size: 16px">support@university-helper.ru
-        </el-link>
 
+        <el-input v-model="amount" placeholder="Сумма пополнения" style="max-width: 400px" type="number"
+                  clearable></el-input>
+        <p></p>
+        <el-button type="success" @click="createPay" :disabled="amount===''" :loading="isLoading.createPay"
+                   icon="el-icon-plus">Пополнить
+          баланс
+        </el-button>
+      </el-col>
+      <el-col :xs="24" :sm="13" style="margin-top: 10px;">
+        <el-alert
+            title="Платеж может обрабатываться несколько часов, но обычно это происходит мгновенно."
+            show-icon
+            type="info"
+            center
+            :closable="false"
+        >
+        </el-alert>
+      </el-col>
+      <el-col :xs="24" :sm="13" style="margin-top: 10px;">
+        <el-alert
+            title="Если возникли проблемы с оплатой или получением теста,
+            обращайтесь в службу поддержки support@university-helper.ru"
+            show-icon
+            type="info"
+            center
+            :closable="false"
+        >
+        </el-alert>
       </el-col>
     </el-row>
   </transition>
@@ -45,9 +68,7 @@
             <el-card class="box-card" shadow="hover">
 
               <el-row>
-                <el-col :xs="24" :sm="4">Добавлен {{
-                    dayjs(test.created_at).utc(true).format('DD.MM.YY в HH:mm')
-                  }}
+                <el-col :xs="24" :sm="4">Добавлен {{ dayjs(test.created_at).utc(true).format('DD.MM.YY в HH:mm') }}
                 </el-col>
                 <el-col :xs="24" :sm="2">Тест #{{ test.external_id }} {{
                   }}
@@ -84,13 +105,14 @@
 
 <script>
 
-import {computed, onMounted, reactive, ref} from 'vue'
-import {useStore} from 'vuex'
-import {useRouter} from 'vue-router'
-import test_api from '../services/TestService'
+import {computed, onMounted, reactive, ref} from 'vue';
+import {useStore} from 'vuex';
+import {useRouter} from 'vue-router';
+import test_api from '../services/TestService';
+import pay_api from '../services/PayService';
 import {ElNotification} from 'element-plus';
-import dayjs from 'dayjs'
-import utc from 'dayjs/plugin/utc'
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 
 dayjs.extend(utc);
 
@@ -103,12 +125,13 @@ export default {
 
     const tests = computed(() => store.state.test.all);
     const user = computed(() => store.state.auth.user);
-    const testLoading = computed(() => store.state.test.isLoading)
+    const testLoading = computed(() => store.state.test.isLoading);
     const data = reactive({
       test_id: '',
     })
     const isLoading = reactive({
       'createTest': false,
+      'createPay': false,
 
     })
 
@@ -117,6 +140,8 @@ export default {
     onMounted(() => {
       show.value = true;
     })
+
+    let amount = ref('');
 
 
     store.dispatch('getTokenFromLocal');
@@ -138,6 +163,17 @@ export default {
         isLoading.createTest = false;
       }
 
+    }
+
+    const createPay = async () => {
+      isLoading.createPay = true;
+      let clear_amount = parseInt(amount.value);
+
+      let r = await pay_api.createPay(store.state.auth.token, clear_amount)
+      let data = r.data;
+      amount.value = '';
+      isLoading.createPay = false;
+      window.open(data.payUrl, "_blank");
     }
 
     const buy_test = async (test_id) => {
@@ -162,7 +198,9 @@ export default {
       testLoading,
       openTest,
       dayjs,
-      show
+      show,
+      amount,
+      createPay,
     }
 
   },

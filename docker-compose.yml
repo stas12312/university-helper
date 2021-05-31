@@ -35,6 +35,9 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       EMAILS_FROM_EMAIL: ${EMAILS_FROM_EMAIL}
       EMAILS_FROM_NAME: ${EMAILS_FROM_NAME}
+      QIWI_PUBLIC_KEY: ${QIWI_PUBLIC_KEY}
+      QIWI_PRIVATE_KEY: ${QIWI_PRIVATE_KEY}
+
   frontend:
     build: ./frontend
   worker:
@@ -62,6 +65,8 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       EMAILS_FROM_EMAIL: ${EMAILS_FROM_EMAIL}
       EMAILS_FROM_NAME: ${EMAILS_FROM_NAME}
+      QIWI_PUBLIC_KEY: ${QIWI_PUBLIC_KEY}
+      QIWI_PRIVATE_KEY: ${QIWI_PRIVATE_KEY}
   db:
     image: postgres:12
     environment:

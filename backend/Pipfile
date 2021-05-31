@@ -23,6 +23,7 @@ redis = "*"
 jinja2 = "*"
 emails = "*"
 aiosmtplib = "*"
+aiohttp = "*"
 
 [dev-packages]
 

@@ -10,6 +10,10 @@ class PayBase(BaseModel):
     value: float
 
 
+class PayRequest(BaseModel):
+    amount: float
+
+
 class PayCreate(PayBase):
     user_id: int
     order_id: Optional[str]

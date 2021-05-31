@@ -20,12 +20,18 @@ class Pay(Base):
     ADD_BONUSE = 2  # Начисление бонусов
     ADD_MONEY = 3  # Добавление денег
 
+    # Статусы платежей
+    CREATED = 0
+    SUCCESS = 1
+    ERROR = 2
+
     uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     order_id = Column(String, nullable=True)
     type = Column(Integer, nullable=False)
     description = Column(String, nullable=False)
     value = Column(Float, nullable=False)
     user_id = Column(BigInteger, ForeignKey('users.id'))
+    status = Column(Integer, server_default=f'{CREATED}')
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     user = relationship('User', back_populates='pays')
